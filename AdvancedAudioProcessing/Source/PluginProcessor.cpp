@@ -173,7 +173,7 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
         float stereoPan = pan->get();
         float pDash = (stereoPan + 1) / 2;
         
-        //Declare Stereo Width
+        //Declare Stereo Width and related constants
         float stereoWidth = width->get();
         
         //Declare Input and Output choice index
@@ -182,13 +182,78 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
         
         for (int i = 0; i < buffer.getNumSamples(); i++)
         {
-            //Declare Left and Reight Inputs and store in float
-            float inLeft = channelDataLeft[i];
-            float inRight = channelDataRight[i];
+            //Stereo in Stereo Out
+            if(inputIndex == 0 && outputIndex == 0)
+            {
+                //Inputs
+                float inLeft = channelDataLeft[i];
+                float inRight = channelDataRight[i];
+                
+                //Convert to MS for Width modulation
+                float mid = (2 - stereoWidth) * (inLeft + inRight);
+                float side = stereoWidth * (inLeft - inRight);
+                
+                //Convert Back to Stereo and Pan
+                float outLeft = (mid + side) * (1 - pDash); 
+                float outRight = (mid - side) * pDash;
+                
+                //Output
+                channelDataLeft[i] = outLeft;
+                channelDataRight[i] = outRight;  
+            }
             
-            //Declare Mid and Side
-            float mid = stereoWidth * (channelDataLeft[i] - channelDataRight[i]);
-            float side = (2 - stereoWidth) * (channelDataLeft[i] + channelDataRight[i]);
+            //Stereo in MS out
+            else if(inputIndex == 0 && outputIndex == 1)
+            {
+                //Inputs and Pan
+                float inLeft = channelDataLeft[i] * (1 - pDash);
+                float inRight = channelDataRight[i] * pDash;
+                
+                //Convert to MS for Width modulation
+                float mid = (2 - stereoWidth) * (inLeft + inRight);
+                float side = stereoWidth * (inLeft - inRight);
+                
+                //Ouput
+                channelDataLeft[i] = mid;
+                channelDataRight[i] = side;
+            }
+            
+            //MS in Stereo out
+            else if(inputIndex == 1 && outputIndex == 0)
+            {
+                //Inputs and Stereo Width
+                float mid = (2 - stereoWidth) * channelDataLeft[i];
+                float side = stereoWidth * channelDataRight[i];
+                
+                //Convert to Stereo and Pan
+                float outLeft = (mid + side) * (1 - pDash);
+                float outRight = (mid - side) * pDash;
+                
+                //Output
+                channelDataLeft[i] = outLeft;
+                channelDataRight[i] = outRight;
+            }
+            
+            //MS in MS out
+			else
+			{
+				//Inputs and Stereo Width
+				float mid = (2 - stereoWidth) * channelDataLeft[i];
+				float side = stereoWidth * channelDataRight[i];
+
+				//Convert to Stereo and Pan
+				float left = (mid + side) * (1 - pDash);
+				float right = (mid - side) * pDash;
+
+				//Convert back to MS
+				float outMid = left + right;
+				float outSide = left - right;
+
+				//Output
+				channelDataLeft[i] = outMid;
+				channelDataRight[i] = outSide;
+			}
+                
 		}
 
     }
