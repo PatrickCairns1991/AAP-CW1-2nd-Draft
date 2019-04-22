@@ -24,6 +24,9 @@ AdvancedAudioProcessingAudioProcessor::AdvancedAudioProcessingAudioProcessor()
                        )
 #endif
 {
+    //Add Parameter for Stereo Pan
+    Pan = new AudioParameterFloat("Pan", "Pan", -1.0f, 1.0f, 0.0f);
+    addParameter(Pan);
 
 }
 

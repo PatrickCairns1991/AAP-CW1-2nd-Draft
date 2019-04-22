@@ -57,5 +57,9 @@ public:
 
 private:
     //==============================================================================
+    
+    //Declare Float Pan
+    AudioParameterFloat* Pan;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AdvancedAudioProcessingAudioProcessor)
 };
