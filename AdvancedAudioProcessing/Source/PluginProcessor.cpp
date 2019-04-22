@@ -170,17 +170,21 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
         auto* channelDataRight = buffer.getWritePointer (1);
         
         //Declare Stereo Pan position and pDash
-        float StereoPan = pan->get();
+        float stereoPan = pan->get();
         float pDash = (StereoPan + 1) / 2;
         
+        //Declare Stereo Width
+        float stereoWidth = width->get();
+        
         //Declare Input and Output choice index
-        int InputIndex = input->getIndex();
-        int OutputIndex = output->getIndex();
+        int inputIndex = input->getIndex();
+        int outputIndex = output->getIndex();
         
         for (int i = 0; i < buffer.getNumSamples(); i++)
         {
-            channelDataLeft[i] = channelDataLeft[i];
-            channelDataRight[i] = channelDataRight[i];
+            //Declare Left and Reight Inputs and store in float
+            float inLeft = channelDataLeft[i];
+            float inRight = channelDataRight[i];
 		}
 
     }
