@@ -24,6 +24,18 @@ AdvancedAudioProcessingAudioProcessor::AdvancedAudioProcessingAudioProcessor()
                        )
 #endif
 {
+    //Add Parameter for Stereo Pan
+    addParameter(pan = new AudioParameterFloat("pan", "Pan", -1.0f, 1.0f, 0.0f));
+    
+    
+    //Add Parameter for Stereo Width
+    addParameter(width = new AudioParameterFloat("width", "Width", 0.0f, 2.0f, 0.5f));
+
+	//Add Parameter for Input Choice
+	addParameter(input = new AudioParameterChoice("input", "Input", { "Stereo", "Mid-Side" }, 0));
+
+	//Add Parameter for Output Choice
+	addParameter(output = new AudioParameterChoice("output", "Output", { "Stereo", "Mid-Side" }, 0));
 
 }
 
@@ -153,9 +165,24 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
     // interleaved by keeping the same state.
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
+        //Declare Left and Right Channels as discrete
+        auto* channelDataLeft = buffer.getWritePointer (0);
+        auto* channelDataRight = buffer.getWritePointer (1);
+        
+        //Declare Stereo Pan position and pDash
+        float StereoPan = pan->get();
+        float pDash = (StereoPan + 1) / 2;
+        
+        //Declare Input and Output choice index
+        int InputIndex = input->getIndex();
+        int OutputIndex = output->getIndex();
+        
+        for (int i = 0; i < buffer.getNumSamples(); i++)
+        {
+            channelDataLeft[i] = channelDataLeft[i];
+            channelDataRight[i] = channelDataRight[i];
+		}
 
-        // ..do something to the data...
     }
 }
 
@@ -176,12 +203,28 @@ void AdvancedAudioProcessingAudioProcessor::getStateInformation (MemoryBlock& de
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
+    
+    MemoryOutputStream stream(destData, true);
+    stream.writeFloat(*pan);
+    stream.writeFloat(*width);
+    stream.writeInt(*input);
+    stream.writeInt(*output);
+    
 }
 
 void AdvancedAudioProcessingAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+    
+    MemoryInputStream stream(data, static_cast<size_t> (sizeInBytes), false);
+    pan->setValueNotifyingHost(stream.readFloat());
+    width->setValueNotifyingHost(stream.readFloat());
+    input->setValueNotifyingHost(stream.readInt());
+    output->setValueNotifyingHost(stream.readInt());
+
+    
+    
 }
 
 //==============================================================================
