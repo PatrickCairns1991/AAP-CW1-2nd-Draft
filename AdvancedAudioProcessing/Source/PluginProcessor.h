@@ -60,7 +60,14 @@ private:
     
     //Declare Float Pan
     AudioParameterFloat* Pan;
+    
+    //Declare Float Width
+	AudioParameterFloat* Width;
+    
+    //Declare ComboBox Input
 	AudioParameterChoice* Input;
+	
+	//Declare ComboBox output
 	AudioParameterChoice* Output;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AdvancedAudioProcessingAudioProcessor)

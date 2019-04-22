@@ -26,6 +26,10 @@ AdvancedAudioProcessingAudioProcessor::AdvancedAudioProcessingAudioProcessor()
 {
     //Add Parameter for Stereo Pan
     addParameter(Pan = new AudioParameterFloat("pan", "Pan", -1.0f, 1.0f, 0.0f));
+    
+    
+    //Add Parameter for Stereo Width
+    addParameter(Width = new AudioParameterFloat("width", "Width", 0.0f, 2.0f, 0.5f));
 
 	//Add Parameter for Input Choice
 	addParameter(Input = new AudioParameterChoice("input", "Input", { "Stereo", "Mid-Side" }, 0));
