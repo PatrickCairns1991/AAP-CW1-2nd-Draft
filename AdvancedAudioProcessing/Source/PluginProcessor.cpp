@@ -171,7 +171,7 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
         
         //Declare Stereo Pan position and pDash
         float stereoPan = pan->get();
-        float pDash = (StereoPan + 1) / 2;
+        float pDash = (stereoPan + 1) / 2;
         
         //Declare Stereo Width
         float stereoWidth = width->get();
@@ -185,6 +185,10 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
             //Declare Left and Reight Inputs and store in float
             float inLeft = channelDataLeft[i];
             float inRight = channelDataRight[i];
+            
+            //Declare Mid and Side
+            float mid = stereoWidth * (channelDataLeft[i] - channelDataRight[i]);
+            float side = (2 - stereoWidth) * (channelDataLeft[i] + channelDataRight[i]);
 		}
 
     }
