@@ -36,6 +36,12 @@ AdvancedAudioProcessingAudioProcessor::AdvancedAudioProcessingAudioProcessor()
 
 	//Add Parameter for Output Choice
 	addParameter(output = new AudioParameterChoice("output", "Output", { "Stereo", "Mid-Side" }, 0));
+	
+	//Add Parameter for Channel Flip Toggle
+	addParameter(flip = new AudioParameterBool("flip", "Flip", false, "Stereo Channel Flip (post-pan)"));
+
+	//Add Parameter for Channel Polarity Invert Toggle
+	addParameter(invert = new AudioParameterBool("invert", "Invert", false, "Stereo Polarity Invert (post-pan)"));
 
 }
 
@@ -165,13 +171,16 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
     // interleaved by keeping the same state.
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        //Declare Left and Right Channels as discrete
-        auto* channelDataLeft = buffer.getWritePointer (0);
-        auto* channelDataRight = buffer.getWritePointer (1);
+		//Declare Left and Right Channels as discrete
+
+		auto* channelDataLeft = buffer.getWritePointer(0);
+		auto* channelDataRight = buffer.getWritePointer(1);
         
         //Declare Stereo Pan position and pDash
         float stereoPan = pan->get();
-        float pDash = (stereoPan + 1) / 2;
+        float pDash = 3.14159265359 * (stereoPan + 1) / 4;
+		float leftPanGain = cos(pDash);
+		float rightPanGain = sin(pDash);
         
         //Declare Stereo Width and related constants
         float stereoWidth = width->get();
@@ -179,75 +188,405 @@ void AdvancedAudioProcessingAudioProcessor::processBlock (AudioBuffer<float>& bu
         //Declare Input and Output choice index
         int inputIndex = input->getIndex();
         int outputIndex = output->getIndex();
+
+		//Declare Input Channel Flip Toggle
+		bool flipToggle = flip->get();
+
+		//Declare Input Polarity Invert Toggle
+		bool invertToggle = invert->get();
         
         for (int i = 0; i < buffer.getNumSamples(); i++)
         {
-            //Stereo in Stereo Out
-            if(inputIndex == 0 && outputIndex == 0)
+            //Stereo In Stereo Out Flip Off Invert Off
+            if(inputIndex == 0 && outputIndex == 0 && flipToggle == false && invertToggle == false)
             {
                 //Inputs
                 float inLeft = channelDataLeft[i];
                 float inRight = channelDataRight[i];
                 
                 //Convert to MS for Width modulation
-                float mid = (2 - stereoWidth) * (inLeft + inRight);
-                float side = stereoWidth * (inLeft - inRight);
+                float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+                float side = stereoWidth * 0.5 * (inLeft - inRight);
                 
-                //Convert Back to Stereo and Pan
-                float outLeft = (mid + side) * (1 - pDash); 
-                float outRight = (mid - side) * pDash;
+                //Convert Back to Stereo
+                float left = (mid + side); 
+                float right = (mid - side);
+
+				//Pan
+				float outLeft = left * leftPanGain;
+				float outRight = right * rightPanGain;
                 
                 //Output
                 channelDataLeft[i] = outLeft;
                 channelDataRight[i] = outRight;  
             }
+
+			//Stereo In Stereo Out Flip Off Invert On
+			else if (inputIndex == 0 && outputIndex == 0 && flipToggle == false && invertToggle == true)
+			{
+				//Inputs
+				float inLeft = channelDataLeft[i];
+				float inRight = channelDataRight[i];
+
+				//Convert to MS for Width modulation
+				float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+				float side = stereoWidth * 0.5 * (inLeft - inRight);
+
+				//Convert Back to Stereo
+				float left = (mid + side);
+				float right = (mid - side);
+
+				//Pan
+				float outLeft = left * leftPanGain;
+				float outRight = right * rightPanGain;
+
+				//Invert
+				float outLeftInvert = outLeft * (-1.0);
+				float outRightInvert = outRight * (-1.0);
+
+				//Output and
+				channelDataLeft[i] = outLeftInvert;
+				channelDataRight[i] = outRightInvert;
+			}
+
+			//Stereo In Stereo Out Flip On Invert Off
+			else if (inputIndex == 0 && outputIndex == 0 && flipToggle == true && invertToggle == false)
+			{
+				//Inputs
+				float inLeft = channelDataLeft[i];
+				float inRight = channelDataRight[i];
+
+				//Convert to MS for Width modulation
+				float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+				float side = stereoWidth * 0.5 * (inLeft - inRight);
+
+				//Convert Back to Stereo
+				float left = (mid + side);
+				float right = (mid - side);
+
+				//Pan
+				float outLeft = left * leftPanGain;
+				float outRight = right * rightPanGain;
+
+				//Flip
+				float outLeftFlipped = outRight;
+				float outRightFlipped = outLeft;
+
+				//Output
+				channelDataLeft[i] = outLeftFlipped;
+				channelDataRight[i] = outRightFlipped;
+			}
+
+			//Stereo In Stereo Out Flip On Invert On
+			else if (inputIndex == 0 && outputIndex == 0 && flipToggle == true && invertToggle == true)
+			{
+				//Inputs
+				float inLeft = channelDataLeft[i];
+				float inRight = channelDataRight[i];
+
+				//Convert to MS for Width modulation
+				float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+				float side = stereoWidth * 0.5 * (inLeft - inRight);
+
+				//Convert Back to Stereo
+				float left = (mid + side);
+				float right = (mid - side);
+
+				//Pan
+				float outLeft = left * leftPanGain;
+				float outRight = right * rightPanGain;
+
+				//Flip and Invert
+				float outLeftFlippedAndInverted = outRight * (-1.0);
+				float outRightFlippedAndInverted = outLeft * (-1.0);
+
+				//Output
+				channelDataLeft[i] = outLeftFlippedAndInverted;
+				channelDataRight[i] = outRightFlippedAndInverted;
+			}
             
-            //Stereo in MS out
-            else if(inputIndex == 0 && outputIndex == 1)
+            //Stereo in MS out Flip Off Invert Off
+            else if(inputIndex == 0 && outputIndex == 1 && flipToggle == false && invertToggle == false)
             {
-                //Inputs and Pan
-                float inLeft = channelDataLeft[i] * (1 - pDash);
-                float inRight = channelDataRight[i] * pDash;
+                //Inputs
+                float inLeft = channelDataLeft[i];
+                float inRight = channelDataRight[i];
                 
                 //Convert to MS for Width modulation
-                float mid = (2 - stereoWidth) * (inLeft + inRight);
-                float side = stereoWidth * (inLeft - inRight);
-                
-                //Ouput
-                channelDataLeft[i] = mid;
-                channelDataRight[i] = side;
+                float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+                float side = stereoWidth * 0.5 * (inLeft - inRight);
+
+				//Convert Back to Stereo
+				float left = mid + side;
+				float right = mid - side;
+
+				//Pan
+				float leftPan = left * leftPanGain;
+				float rightPan = right * rightPanGain;
+
+				//Convert Back to MS
+				float midOut = 0.5 * (leftPan + rightPan);
+				float sideOut = 0.5 * (leftPan - rightPan);
+
+                //Output
+                channelDataLeft[i] = midOut;
+                channelDataRight[i] = sideOut;
             }
+
+			//Stereo in MS out Flip Off Invert On
+			else if (inputIndex == 0 && outputIndex == 1 && flipToggle == false && invertToggle == true)
+			{
+				//Inputs
+				float inLeft = channelDataLeft[i];
+				float inRight = channelDataRight[i];
+
+				//Convert to MS for Width modulation
+				float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+				float side = stereoWidth * 0.5 * (inLeft - inRight);
+
+				//Convert Back to Stereo
+				float left = mid + side;
+				float right = mid - side;
+
+				//Pan and invert
+				float leftPan = (-1.0) * left * leftPanGain;
+				float rightPan = (-1.0) * right * rightPanGain;
+
+				//Convert Back to MS
+				float midOut = 0.5 * (leftPan + rightPan);
+				float sideOut = 0.5 * (leftPan - rightPan);
+
+				//Output
+				channelDataLeft[i] = midOut;
+				channelDataRight[i] = sideOut;
+			}
+
+			//Stereo in MS out Flip On Invert Off
+			else if (inputIndex == 0 && outputIndex == 1 && flipToggle == true && invertToggle == false)
+			{
+				//Inputs
+				float inLeft = channelDataLeft[i];
+				float inRight = channelDataRight[i];
+
+				//Convert to MS for Width modulation
+				float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+				float side = stereoWidth * 0.5 * (inLeft - inRight);
+
+				//Convert Back to Stereo
+				float left = mid + side;
+				float right = mid - side;
+
+				//Pan
+				float leftPan = left * leftPanGain;
+				float rightPan = right * rightPanGain;
+
+				//Flip Channels and Convert Back to MS
+				float midOut = 0.5 * (rightPan + leftPan);
+				float sideOut = 0.5 * (rightPan - leftPan);
+
+				//Output
+				channelDataLeft[i] = midOut;
+				channelDataRight[i] = sideOut;
+			}
+
+			//Stereo in MS out Flip On Invert On
+			else if (inputIndex == 0 && outputIndex == 1 && flipToggle == true && invertToggle == true)
+			{
+				//Inputs
+				float inLeft = channelDataLeft[i];
+				float inRight = channelDataRight[i];
+
+				//Convert to MS for Width modulation
+				float mid = (2 - stereoWidth) * 0.5 * (inLeft + inRight);
+				float side = stereoWidth * 0.5 * (inLeft - inRight);
+
+				//Convert Back to Stereo
+				float left = mid + side;
+				float right = mid - side;
+
+				//Pan and invert
+				float leftPan = (-1.0) * left * leftPanGain;
+				float rightPan = (-1.0) * right * rightPanGain;
+
+				//Flip Channels and Convert Back to MS
+				float midOut = 0.5 * (rightPan + leftPan);
+				float sideOut = 0.5 * (rightPan - leftPan);
+
+				//Output
+				channelDataLeft[i] = midOut;
+				channelDataRight[i] = sideOut;
+			}
             
-            //MS in Stereo out
-            else if(inputIndex == 1 && outputIndex == 0)
+            //MS in Stereo out Flip Off Invert Off
+            else if(inputIndex == 1 && outputIndex == 0 && flipToggle == false && invertToggle == false)
             {
-                //Inputs and Stereo Width
-                float mid = (2 - stereoWidth) * channelDataLeft[i];
-                float side = stereoWidth * channelDataRight[i];
-                
-                //Convert to Stereo and Pan
-                float outLeft = (mid + side) * (1 - pDash);
-                float outRight = (mid - side) * pDash;
+                //Inputs
+                float mid = channelDataLeft[i];
+                float side = channelDataRight[i];
+
+				//Apply stereo width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
+
+				//Convert to stereo and pan
+				float outLeft = (midWide + sideWide) * leftPanGain;
+				float outRight = (midWide - sideWide) * rightPanGain;
                 
                 //Output
                 channelDataLeft[i] = outLeft;
                 channelDataRight[i] = outRight;
             }
-            
-            //MS in MS out
-			else
+
+			//MS in Stereo out Flip Off Invert On
+			else if (inputIndex == 1 && outputIndex == 0 && flipToggle == false && invertToggle == true)
 			{
-				//Inputs and Stereo Width
-				float mid = (2 - stereoWidth) * channelDataLeft[i];
-				float side = stereoWidth * channelDataRight[i];
+				//Inputs
+				float mid = channelDataLeft[i];
+				float side = channelDataRight[i];
+
+				//Apply stereo width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
+
+				//Convert to stereo, pan, and invert
+				float outLeft = (midWide + sideWide) * leftPanGain * (-1.0);
+				float outRight = (midWide - sideWide) * rightPanGain * (-1.0);
+
+				//Output
+				channelDataLeft[i] = outLeft;
+				channelDataRight[i] = outRight;
+			}
+
+			//MS in Stereo out Flip On Invert Off
+			else if (inputIndex == 1 && outputIndex == 0 && flipToggle == true && invertToggle == false)
+			{
+				//Inputs
+				float mid = channelDataLeft[i];
+				float side = channelDataRight[i];
+
+				//Apply stereo width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
+
+				//Convert to stereo and pan
+				float outLeft = (midWide + sideWide) * leftPanGain;
+				float outRight = (midWide - sideWide) * rightPanGain;
+
+				//Flip and Output
+				channelDataLeft[i] = outRight;
+				channelDataRight[i] = outLeft;
+			}
+
+			//MS in Stereo out Flip On Invert On
+			else if (inputIndex == 1 && outputIndex == 0 && flipToggle == true && invertToggle == true)
+			{
+				//Inputs
+				float mid = channelDataLeft[i];
+				float side = channelDataRight[i];
+
+				//Apply stereo width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
+
+				//Convert back to stereo, pan and invert
+				float outLeft = (midWide + sideWide) * leftPanGain * (-1.0);
+				float outRight = (midWide - sideWide) * rightPanGain * (-1.0);
+
+				//Flip and Output
+				channelDataLeft[i] = outRight;
+				channelDataRight[i] = outLeft;
+			}
+            
+            //MS in MS out Flip Off Invert Off
+			else if (inputIndex == 1 && outputIndex == 1 && flipToggle == false && invertToggle == false)
+			{
+				//Inputs
+				float mid = channelDataLeft[i];
+				float side = channelDataRight[i];
+
+				//Apply Width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
 
 				//Convert to Stereo and Pan
-				float left = (mid + side) * (1 - pDash);
-				float right = (mid - side) * pDash;
+				float left = (midWide + sideWide) * leftPanGain;
+				float right = (midWide - sideWide) * rightPanGain;
 
-				//Convert back to MS
-				float outMid = left + right;
-				float outSide = left - right;
+				//Convert back to MS for output
+				float outMid = 0.5 * (left + right);
+				float outSide = 0.5 * (left - right);
+
+				//Output
+				channelDataLeft[i] = outMid;
+				channelDataRight[i] = outSide;
+			}
+
+			//MS in MS out Flip Off Invert On
+			else if (inputIndex == 1 && outputIndex == 1 && flipToggle == false && invertToggle == true)
+			{
+				//Inputs
+				float mid = channelDataLeft[i];
+				float side = channelDataRight[i];
+
+				//Apply Width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
+
+				//Convert to Stereo, Pan and Invert
+				float left = (midWide + sideWide) * leftPanGain * (-1.0);
+				float right = (midWide - sideWide) * rightPanGain * (-1.0);
+
+				//Convert back to MS for output
+				float outMid = 0.5 * (left + right);
+				float outSide = 0.5 * (left - right);
+
+				//Output
+				channelDataLeft[i] = outMid;
+				channelDataRight[i] = outSide;
+			}
+
+			//MS in MS out Flip On Invert Off
+			else if (inputIndex == 1 && outputIndex == 1 && flipToggle == true && invertToggle == false)
+			{
+				//Inputs
+				float mid = channelDataLeft[i];
+				float side = channelDataRight[i];
+
+				//Apply Width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
+
+				//Convert to Stereo and Pan
+				float left = (midWide + sideWide) * leftPanGain;
+				float right = (midWide - sideWide) * rightPanGain;
+
+				//Flip Channels and Convert back to MS for output
+				float outMid = 0.5 * (right + left);
+				float outSide = 0.5 * (right - left);
+
+				//Output
+				channelDataLeft[i] = outMid;
+				channelDataRight[i] = outSide;
+			}
+
+			//MS in MS out Flip On Invert On
+			else if (inputIndex == 1 && outputIndex == 1 && flipToggle == true && invertToggle == true)
+			{
+				//Inputs
+				float mid = channelDataLeft[i];
+				float side = channelDataRight[i];
+
+				//Apply Width
+				float midWide = (2 - stereoWidth) * mid;
+				float sideWide = stereoWidth * side;
+
+				//Convert to Stereo, Invert and Pan
+				float left = (midWide + sideWide) * leftPanGain * (-1.0);
+				float right = (midWide - sideWide) * rightPanGain * (-1.0);
+
+				//Flip Channels and Convert back to MS for output
+				float outMid = 0.5 * (right + left);
+				float outSide = 0.5 * (right - left);
 
 				//Output
 				channelDataLeft[i] = outMid;
@@ -282,6 +621,8 @@ void AdvancedAudioProcessingAudioProcessor::getStateInformation (MemoryBlock& de
     stream.writeFloat(*width);
     stream.writeInt(*input);
     stream.writeInt(*output);
+	stream.writeBool(*flip);
+	stream.writeBool(*invert);
     
 }
 
@@ -295,6 +636,8 @@ void AdvancedAudioProcessingAudioProcessor::setStateInformation (const void* dat
     width->setValueNotifyingHost(stream.readFloat());
     input->setValueNotifyingHost(stream.readInt());
     output->setValueNotifyingHost(stream.readInt());
+	flip->setValueNotifyingHost(stream.readBool());
+	invert->setValueNotifyingHost(stream.readBool());
 
     
     

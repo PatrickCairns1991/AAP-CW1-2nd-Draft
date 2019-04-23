@@ -69,6 +69,12 @@ private:
 	
 	//Declare ComboBox output
 	AudioParameterChoice* output;
+	
+	//Declare Channel Flip Toggle
+	AudioParameterBool* flip;
+
+	//Declare Polarity Invert Toggle
+	AudioParameterBool* invert;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AdvancedAudioProcessingAudioProcessor)
 };
